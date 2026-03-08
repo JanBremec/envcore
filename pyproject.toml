@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "envcore"
+version = "0.1.0"
+description = "Automatic Python environment reconstruction — runtime import tracing, snapshot, and restore."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    { name = "Jan Bremec" },
+]
+keywords = [
+    "dependency",
+    "environment",
+    "reproducibility",
+    "import",
+    "tracing",
+    "snapshot",
+    "restore",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = [
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+envcore = "envcore.cli:cli"
+
+[project.urls]
+Homepage = "https://github.com/janbremec/envcore"
+Repository = "https://github.com/janbremec/envcore"
+Issues = "https://github.com/janbremec/envcore/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,39 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Envcore / Autoenv output
+env_manifest.json
+env_manifest.lock
+.envcore/
+.autoenv/
+
+# Test / Debug output
+crash_result.json
+workflow.json
+workflow.lock
+
+# Unrelated files in user's folder
+*.glb
