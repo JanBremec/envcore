@@ -1,30 +1,23 @@
-<p align="center">
-  <h1 align="center">Envcore</h1>
-  <p align="center">
-    <strong>Runtime import tracing for Python. Know exactly what your code needs.</strong><br>
-    Trace &middot; Snapshot &middot; Restore &middot; Audit
-  </p>
-  <p align="center">
-    <a href="https://pypi.org/project/envcore/"><img alt="PyPI" src="https://img.shields.io/pypi/v/envcore?color=blue&style=flat-square"></a>
-    <a href="https://github.com/JanBremec/envcore/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/JanBremec/envcore?style=flat-square"></a>
-    <a href="https://www.python.org/"><img alt="Python" src="https://img.shields.io/pypi/pyversions/envcore?style=flat-square"></a>
-    <a href="https://github.com/JanBremec/envcore/actions"><img alt="CI" src="https://github.com/JanBremec/envcore/actions/workflows/ci.yml/badge.svg"></a>
-  </p>
-</p>
+# envcore
+
+**`pip freeze` done right — only what your code actually uses.**
+
+[![PyPI](https://img.shields.io/pypi/v/envcore?color=blue&style=flat-square)](https://pypi.org/project/envcore/)
+[![Python](https://img.shields.io/pypi/pyversions/envcore?style=flat-square)](https://www.python.org/)
+[![License](https://img.shields.io/github/license/JanBremec/envcore?style=flat-square)](https://github.com/JanBremec/envcore/blob/main/LICENSE)
+[![CI](https://github.com/JanBremec/envcore/actions/workflows/ci.yml/badge.svg)](https://github.com/JanBremec/envcore/actions)
 
 ---
 
-## Why Envcore
+`pip freeze` dumps your entire environment — often 200+ packages — most of which your project never touches. `pipreqs` scans source files but misses dynamic imports, conditional imports, and anything loaded at runtime.
 
-`pip freeze` dumps your entire environment — 200+ packages, most of which your code never touches. Static analysers like `pipreqs` scan source files but miss dynamic imports, conditional imports, and anything loaded at runtime.
-
-Envcore takes a different approach: it **hooks into Python's import system while your code runs**, records only the packages that are actually imported, resolves them to their PyPI names and pinned versions, and writes a deterministic manifest. One command rebuilds that exact environment anywhere.
+Envcore hooks into Python's import system **while your code actually runs**, records only what gets imported, and writes a clean manifest. One command rebuilds that exact environment anywhere.
 
 ```
-Trace  →  env_manifest.json  →  Restore
+envcore trace train.py   →   env_manifest.json   →   envcore restore
 ```
 
-No configuration files to maintain. No guesswork.
+No config files to maintain. No guesswork. Ship the manifest with your code.
 
 ---
 
@@ -34,194 +27,50 @@ No configuration files to maintain. No guesswork.
 pip install envcore
 ```
 
-Development setup:
-
-```bash
-git clone https://github.com/JanBremec/envcore.git
-cd envcore
-pip install -e ".[dev]"
-```
-
 Requires Python 3.9+.
 
 ---
 
-## Quick Start
+## Usage
 
-**Trace** your script to capture its runtime dependencies:
+**Trace** your script:
 
 ```bash
 envcore trace train.py
 ```
 
 ```
-  envcore trace  train.py
+  Traced 3 packages:
 
-    Traced 3 packages:
+    numpy       1.26.4
+    pandas      2.1.4
+    torch       2.1.0
 
-      numpy 1.26.4
-      pandas 2.1.4
-      torch 2.1.0
-
-    Manifest saved to env_manifest.json
+  Manifest saved → env_manifest.json
 ```
 
-**Restore** the environment on any machine:
+**Restore** anywhere:
 
 ```bash
 envcore restore
 ```
 
-That is all you need. The manifest ships with your code, and `envcore restore` installs exactly what was traced — nothing more.
+That's it. The manifest contains only what was actually imported — nothing more.
 
 ---
 
-## Commands
+## Why runtime tracing?
 
-| Command | What it does |
-|---|---|
-| `envcore trace <script>` | Run a script with import tracing, save manifest |
-| `envcore watch <script>` | Live import tracing with real-time manifest updates |
-| `envcore notebook <.ipynb>` | Trace imports from a Jupyter notebook |
-| `envcore snapshot` | Save imports from programmatic tracking to manifest |
-| `envcore restore` | Install all packages from manifest |
-| `envcore show` | Pretty-print manifest contents |
-| `envcore diff <a> <b>` | Compare two manifests |
-| `envcore export` | Export to requirements.txt, conda, Docker, and more |
-| `envcore sync` | Diff manifest against requirements.txt or pyproject.toml |
-| `envcore doctor` | Environment health check: missing, outdated, orphans |
-| `envcore clean` | Remove packages not tracked in manifest |
-| `envcore minimize` | Find the minimal top-level install set |
-| `envcore lock` | Generate lockfile with SHA-256 hashes |
-| `envcore graph` | Dependency graph (ASCII tree, Mermaid, Graphviz DOT) |
-| `envcore audit` | Scan for known vulnerabilities via OSV.dev |
-| `envcore ci` | Verify environment matches manifest (exit 0 or 1) |
-| `envcore hooks install` | Install git pre-commit hook |
-| `envcore history` | Manifest version history and snapshots |
-| `envcore init` | Create a blank manifest |
+Static tools read your source files. They miss:
 
-Every command supports `--help`. Set `NO_COLOR=1` to disable coloured output.
+- `import torch` inside an `if cuda_available:` block
+- imports inside functions, called only at runtime
+- dynamic `importlib.import_module(...)` calls
+- packages imported by your dependencies on your behalf
 
----
+Envcore catches all of these because it watches what Python actually loads, not what it might load.
 
-## Export Formats
-
-```bash
-envcore export -f requirements   # requirements.txt
-envcore export -f pyproject      # pyproject.toml [project.dependencies]
-envcore export -f conda          # environment.yml
-envcore export -f docker         # Dockerfile with pinned installs
-envcore export -f pipfile        # Pipfile
-envcore export -f setup          # setup.py
-```
-
----
-
-## Health Check
-
-```bash
-envcore doctor
-```
-
-```
-  Python    3.11.5
-  Packages  18
-
-    torch       required 2.1.0, not installed       [missing]
-    numpy       manifest 1.25.0 != installed 1.26.4 [mismatch]
-    flask       3.0.0 -> 3.1.0 available            [outdated]
-    requests    installed 2.31.0, not in manifest    [orphan]
-
-  1 critical, 2 warnings
-```
-
-Detects missing packages, version mismatches, orphaned installs, outdated dependencies, and stale manifests.
-
----
-
-## Minimize
-
-Reduce a traced environment to its minimal top-level install set:
-
-```bash
-envcore minimize
-```
-
-```
-  18 packages traced -> 3 top-level installs
-
-  Top-level
-    numpy 1.26.4
-    pandas 2.1.3
-    scikit-learn 1.3.2
-
-  Transitive (auto-installed)
-    scipy 1.11.3
-    joblib 1.2.0
-    threadpoolctl 3.2.0
-
-  Minimal install command:
-  pip install numpy==1.26.4 pandas==2.1.3 scikit-learn==1.3.2
-```
-
----
-
-## Security
-
-```bash
-envcore lock    # Lockfile with SHA-256 integrity hashes
-envcore audit   # Scan packages against OSV.dev vulnerability database
-```
-
----
-
-## Dependency Graph
-
-```bash
-envcore graph              # ASCII tree
-envcore graph -f mermaid   # Mermaid (renders in GitHub READMEs)
-envcore graph -f dot       # Graphviz DOT
-```
-
-```
-  pandas 2.1.3
-  +-- numpy 1.26.4
-  +-- python-dateutil 2.8.2
-  scikit-learn 1.3.2
-  +-- joblib 1.2.0
-  +-- numpy 1.26.4
-  +-- scipy 1.11.3
-  +-- threadpoolctl 3.2.0
-```
-
----
-
-## CI/CD and Git Hooks
-
-```bash
-envcore ci              # Exit 0 if environment matches, 1 otherwise
-envcore hooks install   # Pre-commit hook: auto-check manifest on commit
-envcore sync            # Diff manifest vs requirements.txt
-envcore sync --apply    # Overwrite requirements.txt from manifest
-```
-
----
-
-## Jupyter Notebooks
-
-```bash
-envcore notebook analysis.ipynb            # Trace imports at runtime
-envcore notebook analysis.ipynb --static   # Static analysis only
-```
-
-Inside IPython or Jupyter:
-
-```python
-%load_ext envcore
-%envcore start
-import numpy, pandas
-%envcore snapshot
-```
+> **Note:** Envcore traces one execution. If your code has branches that aren't hit during tracing (e.g. a `prod`-only import), those won't be captured. Trace against a representative run.
 
 ---
 
@@ -245,8 +94,7 @@ Context manager:
 ```python
 from envcore import ImportTracer
 
-tracer = ImportTracer()
-with tracer:
+with ImportTracer() as tracer:
     import numpy
     import pandas
 
@@ -271,72 +119,76 @@ print(tracer.module_names)  # ['torch', 'wandb']
 
 ---
 
-## How It Works
+## Jupyter Notebooks
 
-```
-1. TRACE
-   builtins.__import__  -->  ImportTracer hook
-   Records: module name, timestamp, order
-   Filters: stdlib, pre-existing modules
-
-2. RESOLVE
-   import name  -->  PyPI package + version
-   "PIL"        -->  Pillow 10.2.0
-   "cv2"        -->  opencv-python 4.9.0
-   "sklearn"    -->  scikit-learn 1.4.0
-
-3. SNAPSHOT
-   env_manifest.json
-   { "numpy": "1.26.4", "torch": "2.1.0", ... }
-
-4. RESTORE
-   pip install numpy==1.26.4 torch==2.1.0 ...
+```bash
+envcore notebook analysis.ipynb
 ```
 
-By tracing at runtime, Envcore captures dynamic imports, conditional imports, and imports inside functions — things static analysis tools miss entirely.
+Or inside a running notebook:
+
+```python
+%load_ext envcore
+%envcore start
+import numpy, pandas
+%envcore snapshot
+```
+
+---
+
+## How it works
+
+```
+1. TRACE    builtins.__import__ → ImportTracer hook
+            Records module name, filters stdlib and pre-existing packages
+
+2. RESOLVE  import name → PyPI package + pinned version
+            "PIL" → Pillow 10.2.0
+            "cv2" → opencv-python 4.9.0
+            "sklearn" → scikit-learn 1.4.0
+
+3. MANIFEST env_manifest.json
+            { "numpy": "1.26.4", "torch": "2.1.0", ... }
+
+4. RESTORE  pip install numpy==1.26.4 torch==2.1.0 ...
+```
+
+---
+
+## Other commands
+
+| Command | What it does |
+|---|---|
+| `envcore trace <script>` | Trace a script, save manifest |
+| `envcore restore` | Install packages from manifest |
+| `envcore show` | Print manifest contents |
+| `envcore diff <a> <b>` | Compare two manifests |
+| `envcore export -f <format>` | Export to `requirements.txt`, `pyproject.toml`, `conda`, `docker`, `pipfile`, `setup.py` |
+| `envcore sync` | Diff manifest vs existing `requirements.txt` |
+| `envcore doctor` | Check for missing, outdated, or orphaned packages |
+| `envcore minimize` | Find the minimal top-level install set |
+| `envcore lock` | Generate lockfile with SHA-256 hashes |
+| `envcore audit` | Scan for vulnerabilities via OSV.dev |
+| `envcore ci` | Exit 0/1 based on whether environment matches manifest |
+
+Every command supports `--help`. Set `NO_COLOR=1` to disable colour output.
 
 ---
 
 ## Configuration
 
-Project-level settings in `pyproject.toml`:
-
 ```toml
+# pyproject.toml
 [tool.envcore]
 manifest = "env_manifest.json"
 exclude = ["setuptools", "pip", "wheel"]
-entry_points = ["src/main.py", "src/api.py"]
+entry_points = ["src/main.py"]
 auto_export = "requirements.txt"
 ```
 
 ---
 
-## Comparison
-
-| Feature | Envcore | pipreqs | pip freeze |
-|---|---|---|---|
-| Detection method | **Runtime tracing** | Static analysis | Environment dump |
-| Dynamic imports | Yes | No | N/A |
-| Conditional imports | Yes | No | N/A |
-| Filters stdlib | Yes | Yes | No |
-| Filters unused packages | Yes | Yes | No |
-| Import alias handling | Yes | Partial | Yes |
-| One-command restore | Yes | No | No |
-| Export (6 formats) | Yes | No | No |
-| Health check | Yes | No | No |
-| Dependency minimization | Yes | No | No |
-| Lockfile with hashes | Yes | No | No |
-| Dependency graph | Yes | No | No |
-| Vulnerability scanning | Yes | No | No |
-| Jupyter support | Yes | No | No |
-| CI/CD integration | Yes | No | No |
-| Git hooks | Yes | No | No |
-
----
-
 ## Contributing
-
-Contributions welcome. Please open an issue or pull request.
 
 ```bash
 git clone https://github.com/JanBremec/envcore.git
@@ -345,8 +197,10 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
+Issues and PRs welcome.
+
 ---
 
 ## License
 
-[MIT](LICENSE) — Jan Bremec
+[MIT](./LICENSE) — Jan Bremec
