@@ -42,6 +42,15 @@ _KNOWN_ALIASES: dict[str, str] = {
     "pptx": "python-pptx",
     "lxml": "lxml",
     "google.cloud": "google-cloud-core",
+    # FIX: packages whose import name differs from their PyPI distribution name
+    # and which do not ship top_level.txt in modern builds.
+    "pywt": "PyWavelets",
+    "fitz": "PyMuPDF",
+    "OpenGL": "PyOpenGL",
+    "boto": "boto3",
+    "pkg_resources": "setuptools",
+    "Levenshtein": "python-Levenshtein",
+    "usb1": "libusb1",
 }
 
 
@@ -101,21 +110,57 @@ def _build_dist_cache() -> dict[str, tuple[str, str]]:
     """Build a reverse index: import_name → (package_name, version).
 
     This is O(n) on first call and O(1) on subsequent lookups.
+
+    Resolution strategy (in priority order):
+
+    1. ``top_level.txt`` — explicit and authoritative when present.
+    2. ``RECORD``-based discovery — for modern packages that no longer ship
+       ``top_level.txt`` (e.g. PyWavelets).  Walks ``dist.files()`` and
+       infers top-level names from ``pkg/__init__.py`` and ``module.py``
+       entries.
+    3. Normalized package name — last-resort fallback.
     """
     cache: dict[str, tuple[str, str]] = {}
     for dist in importlib.metadata.distributions():
         name = dist.metadata["Name"]
         version = dist.version
+        found_via_explicit = False
 
-        # Try the explicit top_level.txt first
+        # 1. Try the explicit top_level.txt first
         top_level = dist.read_text("top_level.txt")
         if top_level is not None:
             for tl_name in top_level.strip().splitlines():
                 tl_name = tl_name.strip()
                 if tl_name and tl_name not in cache:
                     cache[tl_name] = (name, version)
+                    found_via_explicit = True
 
-        # Also index by the package name itself (normalized)
+        # 2. FIX: Fall back to RECORD-based discovery for packages that omit
+        #    top_level.txt (common in modern builds, e.g. PyWavelets ships
+        #    pywt/__init__.py but no top_level.txt, so "pywt" was never indexed).
+        if not found_via_explicit:
+            try:
+                files = dist.files  # list[PackagePath] | None
+            except Exception:
+                files = None
+            if files:
+                for f in files:
+                    parts = f.parts
+                    # Skip dist-info and data directories entirely
+                    if not parts or parts[0].endswith((".dist-info", ".data")):
+                        continue
+                    # Top-level package: foo/__init__.py  →  index "foo"
+                    if len(parts) >= 2 and parts[-1] == "__init__.py":
+                        module = parts[0]
+                        if module and not module.startswith("_") and module not in cache:
+                            cache[module] = (name, version)
+                    # Top-level module: foo.py  →  index "foo"
+                    elif len(parts) == 1 and f.suffix == ".py":
+                        module = parts[0][:-3]  # strip .py
+                        if module and not module.startswith("_") and module not in cache:
+                            cache[module] = (name, version)
+
+        # 3. Also index by the package name itself (normalized)
         normalized = name.replace("-", "_").lower()
         if normalized not in cache:
             cache[normalized] = (name, version)
