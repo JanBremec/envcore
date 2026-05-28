@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-05-28
+
+### Fixed
+
+- Packages that ship without `top_level.txt` (e.g. `PyWavelets`/`pywt`,
+  `PyMuPDF`/`fitz`, `PyOpenGL`/`OpenGL`) are now correctly resolved via
+  RECORD-based discovery in `_build_dist_cache()` — previously they were
+  silently dropped from `env_manifest.json` and `requirements.txt`
+- Added `pywt`, `fitz`, `OpenGL`, `boto`, `pkg_resources`, `Levenshtein`
+  and `usb1` to the known alias table as a belt-and-suspenders fallback
+
 ## [0.1.0] — 2026-03-07
 
 ### Added

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "envcore"
-version = "0.1.0"
+version = "0.1.1"
 description = "Automatic Python environment reconstruction — runtime import tracing, snapshot, and restore."
 readme = "README.md"
 license = {text = "MIT"}
